@@ -8,7 +8,7 @@ from pathlib import Path
 
 import joblib
 
-from ml.features import FEATURE_NAMES, features_frame
+from ml.features import FEATURE_NAMES, explain, features_frame
 
 _URL_RE = re.compile(
     r"^([a-zA-Z][a-zA-Z0-9+.-]*://)?"
@@ -70,6 +70,7 @@ class Predictor:
             "label_id": label,
             "phishing_probability": phishing_probability,
             "model_version": self.version,
+            "reasons": explain(url),
         }
 
 

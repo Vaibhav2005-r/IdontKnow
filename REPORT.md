@@ -56,6 +56,34 @@ model reaches users.
 - **Jenkins** — orchestrates retraining, gating, testing, and deployment.
 - **Docker** — the deployable unit; one image tag = one model version.
 
+### Frontend
+
+The UI ([app/templates/index.html](../app/templates/index.html),
+[app/static/](../app/static/)) is hand-built HTML/CSS/vanilla JS — no
+framework, no build step, no CDN dependency, so it works offline and stays
+simple enough for a viva walkthrough of the source. Two things beyond a
+plain form-and-result page:
+
+- **A live mascot.** An inline SVG shield character whose face, eyebrows,
+  and a badge icon are driven directly by application state — idle while
+  waiting, a pulsing scan animation while `POST /predict` is in flight,
+  then a happy green bounce or an alarmed red shake once the verdict comes
+  back. It's wired to the same fetch response the result card renders, not
+  a separate mock.
+- **An interactive pipeline diagram** ("How PhishGuard Works" section): an
+  SVG rendering of the architecture above plus the Jenkins stage sequence,
+  with every node clickable (shows a plain-English caption of what that
+  component does) and a "Play the walkthrough" button that animates the
+  actual path a prediction and a correction take through the system, end
+  to end, stage by stage.
+- **Reasons.** Each verdict includes a short list of human-readable reasons
+  (`ml.features.explain()`) — e.g. *"uses the .tk TLD"*, *"no HTTPS"*, *"3
+  bait words in the URL"*. This is deliberately simple, rule-based logic
+  over the same signals the model trains on, not SHAP — full feature
+  attribution is listed under Future Scope (§10) rather than implemented
+  here, since a rule-based explanation is enough to make a verdict legible
+  without adding a second, harder-to-verify explanation model.
+
 ## 4. Dataset
 
 **Web Page Phishing Detection** (Hannousse & Yahiouche, 2021; also

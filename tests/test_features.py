@@ -1,6 +1,6 @@
 import math
 
-from ml.features import FEATURE_NAMES, extract_features, features_frame
+from ml.features import FEATURE_NAMES, explain, extract_features, features_frame
 
 
 def test_feature_names_count():
@@ -60,3 +60,27 @@ def test_shortening_service_flag():
     idx = FEATURE_NAMES.index("has_shortening_service")
     assert extract_features("http://bit.ly/abc123")[idx] == 1.0
     assert extract_features("http://example.com/abc123")[idx] == 0.0
+
+
+def test_explain_flags_suspicious_signals():
+    reasons = explain("http://sbi-kyc-update.xyz/login.php?id=4821")
+    joined = " ".join(reasons).lower()
+    assert "xyz" in joined
+    assert "https" in joined
+    assert any("bait word" in r for r in reasons)
+
+
+def test_explain_flags_clean_signals():
+    reasons = explain("https://www.wikipedia.org/wiki/Phishing")
+    joined = " ".join(reasons).lower()
+    assert "https" in joined
+
+
+def test_explain_respects_top_n():
+    reasons = explain("http://192.168.1.1/secure-login-verify.tk", top_n=2)
+    assert len(reasons) <= 2
+
+
+def test_explain_ip_address_is_top_reason():
+    reasons = explain("http://192.168.1.1/login", top_n=1)
+    assert "ip address" in reasons[0].lower()

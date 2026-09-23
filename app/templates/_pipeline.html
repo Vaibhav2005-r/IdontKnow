@@ -1,0 +1,104 @@
+<section class="pipeline-section" id="pipeline">
+  <div class="pipeline-head">
+    <h2>How PhishGuard Works</h2>
+    <p class="pipeline-sub">Click any box, or press play to walk through the whole loop end to end.</p>
+    <button type="button" id="pipeline-play-btn" class="pipeline-play-btn">
+      <span class="play-icon">▶</span> Play the walkthrough
+    </button>
+  </div>
+
+  <div class="pipeline-diagram-wrap">
+    <svg id="pipeline-svg" class="pipeline-svg" viewBox="0 0 980 460" xmlns="http://www.w3.org/2000/svg">
+      <text x="16" y="24" class="lane-label">RUNTIME · DOCKER COMPOSE</text>
+      <text x="16" y="294" class="lane-label">CI/CD LANE · JENKINS</text>
+
+      <!-- edges (drawn first, under nodes) -->
+      <g class="edges">
+        <path id="edge-user-app" class="edge" d="M175,70 L255,70" />
+        <path id="edge-app-db" class="edge" d="M425,70 L505,70" />
+        <path id="edge-db-dash" class="edge" d="M675,70 L775,70" />
+        <path id="edge-gh-jenkins" class="edge" d="M175,340 L290,340" />
+        <path id="edge-jenkins-docker" class="edge" d="M550,340 L695,340" />
+        <path id="edge-db-jenkins" class="edge edge--cross" d="M540,102 C 540,190 460,210 440,298" />
+        <path id="edge-docker-app" class="edge edge--cross" d="M745,308 C 700,190 420,170 365,102" />
+        <path id="edge-jenkins-dash" class="edge edge--cross" d="M470,298 C 560,230 860,190 860,102" />
+      </g>
+
+      <!-- edge labels -->
+      <g class="edge-labels">
+        <text class="edge-label" x="215" y="62">check URL</text>
+        <text class="edge-label" x="465" y="62">log prediction</text>
+        <text class="edge-label" x="725" y="62">feedback stats</text>
+        <text class="edge-label" x="232" y="332">webhook / cron</text>
+        <text class="edge-label" x="622" y="332">build &amp; tag</text>
+        <text class="edge-label" x="450" y="200" text-anchor="middle">new labelled data</text>
+        <text class="edge-label" x="600" y="185" text-anchor="middle">deploy vX.Y</text>
+        <text class="edge-label" x="740" y="220" text-anchor="middle">registry + history</text>
+      </g>
+
+      <!-- flow dots (ambient animation along each edge) -->
+      <g class="flow-dots">
+        <circle r="4" class="flow-dot"><animateMotion dur="2.4s" repeatCount="indefinite"><mpath href="#edge-user-app" /></animateMotion></circle>
+        <circle r="4" class="flow-dot"><animateMotion dur="2.4s" begin="0.3s" repeatCount="indefinite"><mpath href="#edge-app-db" /></animateMotion></circle>
+        <circle r="4" class="flow-dot"><animateMotion dur="2.4s" begin="0.6s" repeatCount="indefinite"><mpath href="#edge-db-dash" /></animateMotion></circle>
+        <circle r="4" class="flow-dot"><animateMotion dur="2.6s" repeatCount="indefinite"><mpath href="#edge-gh-jenkins" /></animateMotion></circle>
+        <circle r="4" class="flow-dot"><animateMotion dur="2.6s" begin="0.4s" repeatCount="indefinite"><mpath href="#edge-jenkins-docker" /></animateMotion></circle>
+        <circle r="4" class="flow-dot flow-dot--cross"><animateMotion dur="3.4s" repeatCount="indefinite"><mpath href="#edge-db-jenkins" /></animateMotion></circle>
+        <circle r="4" class="flow-dot flow-dot--cross"><animateMotion dur="3.4s" begin="1s" repeatCount="indefinite"><mpath href="#edge-docker-app" /></animateMotion></circle>
+        <circle r="4" class="flow-dot flow-dot--cross"><animateMotion dur="3.4s" begin="1.8s" repeatCount="indefinite"><mpath href="#edge-jenkins-dash" /></animateMotion></circle>
+      </g>
+
+      <!-- nodes -->
+      <g class="node" id="node-user" data-caption="A student or staff member pastes a URL into the web app.">
+        <rect class="node-box" x="5" y="38" width="170" height="64" rx="12" />
+        <text class="node-title" x="90" y="65" text-anchor="middle">User</text>
+        <text class="node-sub" x="90" y="84" text-anchor="middle">browser / student</text>
+      </g>
+
+      <g class="node" id="node-app" data-caption="Flask serves the prediction API + UI and loads the current model once at startup.">
+        <rect class="node-box" x="255" y="38" width="170" height="64" rx="12" />
+        <text class="node-title" x="340" y="60" text-anchor="middle">Flask App</text>
+        <text class="node-title" x="340" y="76" text-anchor="middle">+ Model</text>
+        <text class="node-sub" x="340" y="93" text-anchor="middle">prediction API · UI</text>
+      </g>
+
+      <g class="node" id="node-db" data-caption="SQLite table storing every prediction and correction -- tomorrow's training data.">
+        <rect class="node-box" x="505" y="38" width="170" height="64" rx="12" />
+        <text class="node-title" x="590" y="65" text-anchor="middle">Feedback DB</text>
+        <text class="node-sub" x="590" y="84" text-anchor="middle">predictions &amp; corrections</text>
+      </g>
+
+      <g class="node" id="node-dash" data-caption="Streamlit dashboard: model versions, accuracy history, promoted vs rejected runs.">
+        <rect class="node-box" x="775" y="38" width="170" height="64" rx="12" />
+        <text class="node-title" x="860" y="65" text-anchor="middle">Dashboard</text>
+        <text class="node-sub" x="860" y="84" text-anchor="middle">versions · accuracy</text>
+      </g>
+
+      <g class="node" id="node-github" data-caption="Code, data and the Jenkinsfile live here. A push fires a Jenkins webhook.">
+        <rect class="node-box" x="5" y="308" width="170" height="64" rx="12" />
+        <text class="node-title" x="90" y="335" text-anchor="middle">GitHub Repo</text>
+        <text class="node-sub" x="90" y="354" text-anchor="middle">code · data · Jenkinsfile</text>
+      </g>
+
+      <g class="node node--jenkins" id="node-jenkins" data-caption="Merges feedback, retrains, gates on accuracy, runs pytest + Selenium, then scans the image with Trivy.">
+        <rect class="node-box" x="290" y="298" width="260" height="84" rx="12" />
+        <text class="node-title" x="420" y="320" text-anchor="middle">Jenkins Pipeline</text>
+        <g class="stage-pills">
+          <g class="stage-pill" id="stage-train"><rect x="300" y="332" width="52" height="20" rx="10" /><text x="326" y="346" text-anchor="middle">Train</text></g>
+          <g class="stage-pill" id="stage-gate"><rect x="358" y="332" width="52" height="20" rx="10" /><text x="384" y="346" text-anchor="middle">Gate</text></g>
+          <g class="stage-pill" id="stage-test"><rect x="416" y="332" width="52" height="20" rx="10" /><text x="442" y="346" text-anchor="middle">Test</text></g>
+          <g class="stage-pill" id="stage-scan"><rect x="474" y="332" width="56" height="20" rx="10" /><text x="502" y="346" text-anchor="middle">Scan</text></g>
+        </g>
+        <text class="node-sub" x="420" y="370" text-anchor="middle">train · gate · test · scan</text>
+      </g>
+
+      <g class="node" id="node-docker" data-caption="phishguard:vX.Y -- tagged and Trivy-scanned, ready to deploy.">
+        <rect class="node-box" x="695" y="308" width="170" height="64" rx="12" />
+        <text class="node-title" x="780" y="335" text-anchor="middle">Docker Image</text>
+        <text class="node-sub" x="780" y="354" text-anchor="middle">phishguard:vX.Y</text>
+      </g>
+    </svg>
+  </div>
+
+  <p class="pipeline-caption" id="pipeline-caption">Click a box above to see what it does, or press play.</p>
+</section>

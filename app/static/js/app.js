@@ -5,11 +5,24 @@
   const input = document.getElementById("url-input");
   const checkBtn = document.getElementById("check-btn");
   const resultEl = document.getElementById("result");
+  const mascot = document.getElementById("mascot");
+  const mascotCaption = document.getElementById("mascot-caption");
 
   function escapeHtml(str) {
     const div = document.createElement("div");
     div.textContent = str;
     return div.innerHTML;
+  }
+
+  function setMascot(state, caption) {
+    if (mascot) mascot.setAttribute("class", "mascot mascot--" + state);
+    if (mascotCaption && caption !== undefined) mascotCaption.textContent = caption;
+  }
+
+  function renderReasons(reasons) {
+    if (!reasons || !reasons.length) return "";
+    const items = reasons.map((r) => `<li>${escapeHtml(r)}</li>`).join("");
+    return `<ul class="reasons-list">${items}</ul>`;
   }
 
   function renderResult(data) {
@@ -24,20 +37,31 @@
         <p class="result-verdict">${isPhishing ? "Phishing" : "Safe"}</p>
         <p class="result-url">${escapeHtml(data.url)}</p>
         <div class="gauge"><div class="gauge-fill" style="width: 0%"></div></div>
-        <p class="gauge-label">${pct}% phishing probability · model v${escapeHtml(String(data.model_version))}</p>
-      </div>
-      <div class="result-actions">
-        <button type="button" id="feedback-wrong-btn" class="btn-ghost" data-feedback-id="${data.feedback_id}">
-          This is wrong
-        </button>
-        <p class="feedback-thanks" hidden>Thanks — logged for the next training run.</p>
+        <p class="gauge-label">Confidence ${pct}% · model v${escapeHtml(String(data.model_version))}</p>
+        ${renderReasons(data.reasons)}
+        <div class="feedback-ask">
+          <span class="feedback-ask-label">Was this prediction correct?</span>
+          <div class="feedback-buttons">
+            <button type="button" id="feedback-yes-btn" class="btn-ghost btn-ghost--yes">Yes</button>
+            <button type="button" id="feedback-wrong-btn" class="btn-ghost btn-ghost--no" data-feedback-id="${data.feedback_id}">
+              No, report it
+            </button>
+          </div>
+          <p class="feedback-thanks" hidden></p>
+        </div>
       </div>
     `;
-    // animate the gauge in on the next frame
     requestAnimationFrame(() => {
       const fill = resultEl.querySelector(".gauge-fill");
       if (fill) fill.style.width = pct + "%";
     });
+
+    setMascot(
+      isPhishing ? "phishing" : "safe",
+      isPhishing
+        ? "That one's phishing — steer clear."
+        : "Looks safe to me!"
+    );
   }
 
   function renderError(message) {
@@ -51,6 +75,7 @@
       form.appendChild(errEl);
     }
     errEl.textContent = message;
+    setMascot("idle", "Hmm, that didn't look like a URL.");
   }
 
   function clearFormError() {
@@ -62,6 +87,7 @@
     checkBtn.classList.add("loading");
     checkBtn.disabled = true;
     clearFormError();
+    setMascot("scanning", "Scanning the link…");
     try {
       const res = await fetch("/predict", {
         method: "POST",
@@ -100,13 +126,33 @@
     });
   });
 
-  // event delegation: the "This is wrong" button is re-rendered dynamically
-  resultEl.addEventListener("click", async (e) => {
-    const btn = e.target.closest("#feedback-wrong-btn");
-    if (!btn) return;
+  function lockFeedbackButtons(selectedBtn) {
+    const ask = resultEl.querySelector(".feedback-ask");
+    if (!ask) return;
+    ask.querySelectorAll(".btn-ghost").forEach((b) => {
+      b.disabled = true;
+      b.classList.remove("is-selected");
+    });
+    selectedBtn.classList.add("is-selected");
+    const thanks = ask.querySelector(".feedback-thanks");
+    if (thanks) thanks.hidden = false;
+  }
 
-    btn.disabled = true;
-    btn.textContent = "Sending…";
+  // event delegation: feedback buttons are re-rendered dynamically
+  resultEl.addEventListener("click", async (e) => {
+    const yesBtn = e.target.closest("#feedback-yes-btn");
+    if (yesBtn) {
+      const thanks = resultEl.querySelector(".feedback-thanks");
+      if (thanks) thanks.textContent = "Thanks for confirming!";
+      lockFeedbackButtons(yesBtn);
+      return;
+    }
+
+    const noBtn = e.target.closest("#feedback-wrong-btn");
+    if (!noBtn) return;
+
+    noBtn.disabled = true;
+    noBtn.textContent = "Sending…";
     try {
       const res = await fetch("/feedback", {
         method: "POST",
@@ -114,15 +160,16 @@
           "Content-Type": "application/json",
           "Accept": "application/json",
         },
-        body: JSON.stringify({ feedback_id: btn.dataset.feedbackId }),
+        body: JSON.stringify({ feedback_id: noBtn.dataset.feedbackId }),
       });
       if (!res.ok) throw new Error("feedback failed");
-      btn.hidden = true;
+      noBtn.textContent = "No, report it";
       const thanks = resultEl.querySelector(".feedback-thanks");
-      if (thanks) thanks.hidden = false;
+      if (thanks) thanks.textContent = "Thanks — logged for the next training run.";
+      lockFeedbackButtons(noBtn);
     } catch (err) {
-      btn.disabled = false;
-      btn.textContent = "This is wrong";
+      noBtn.disabled = false;
+      noBtn.textContent = "No, report it";
     }
   });
 })();

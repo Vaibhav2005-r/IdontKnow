@@ -149,3 +149,65 @@ def features_frame(urls: list[str]) -> pd.DataFrame:
     """Vectorised feature extraction for a list of URLs -> DataFrame[FEATURE_NAMES]."""
     rows = [extract_features(u) for u in urls]
     return pd.DataFrame(rows, columns=FEATURE_NAMES)
+
+
+_SUSPICIOUS_TLDS = {"xyz", "top", "tk", "ml", "ga", "cf", "gq", "buzz", "click", "icu", "cam"}
+
+
+def explain(url: str, top_n: int = 4) -> list[str]:
+    """Human-readable reasons behind a verdict, for display only.
+
+    Deliberately simple and rule-based (not SHAP -- that's future work per
+    the project roadmap): each rule inspects the same signals the model
+    trains on, scored by how suspicious/clean it is, and the top_n most
+    salient ones are returned. This never touches FEATURE_NAMES or the
+    model's own feature vector -- it's a presentation-layer explanation,
+    not a second set of model inputs.
+    """
+    url = (url or "").strip()
+    if not re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*://", url):
+        url = "http://" + url
+    parts = urlsplit(url)
+    hostname = parts.hostname or ""
+    labels = [lbl for lbl in hostname.split(".") if lbl]
+    tld = labels[-1].lower() if len(labels) >= 2 else ""
+    lower_url = url.lower()
+    host_hyphens = hostname.count("-")
+    host_digits = sum(c.isdigit() for c in hostname)
+    suspicious_words = [w for w in _SUSPICIOUS_WORDS if w in lower_url]
+
+    # (severity, suspicious?, text) -- higher severity sorts first within its polarity
+    candidates: list[tuple[int, bool, str]] = []
+
+    if _is_ip_host(hostname):
+        candidates.append((100, True, "hosted directly on a raw IP address, not a domain"))
+    if tld in _SUSPICIOUS_TLDS:
+        candidates.append((90, True, f"uses the .{tld} TLD, common among throwaway phishing domains"))
+    if parts.scheme.lower() != "https":
+        candidates.append((80, True, "no HTTPS"))
+    if suspicious_words:
+        words = ", ".join(suspicious_words[:3])
+        candidates.append((75, True, f"{len(suspicious_words)} bait word(s) in the URL ({words})"))
+    registered_domain = ".".join(labels[-2:]) if len(labels) >= 2 else hostname
+    if registered_domain.lower() in _SHORTENERS:
+        candidates.append((70, True, "uses a known URL-shortening service"))
+    if host_hyphens >= 2:
+        candidates.append((60, True, f"{host_hyphens} hyphens in the hostname"))
+    if hostname and host_digits / len(hostname) > 0.3:
+        candidates.append((55, True, "unusually digit-heavy hostname"))
+    if _shannon_entropy(url) > 4.4:
+        candidates.append((50, True, "high randomness in the URL string"))
+    if len(url) > 75:
+        candidates.append((40, True, f"unusually long URL ({len(url)} characters)"))
+
+    if parts.scheme.lower() == "https":
+        candidates.append((30, False, "uses HTTPS"))
+    if not suspicious_words:
+        candidates.append((25, False, "no bait keywords found"))
+    if not _is_ip_host(hostname) and tld not in _SUSPICIOUS_TLDS and tld:
+        candidates.append((20, False, f"ordinary .{tld} domain, not IP-based"))
+    if len(url) <= 75:
+        candidates.append((10, False, "typical URL length"))
+
+    candidates.sort(key=lambda c: -c[0])
+    return [text for _, _, text in candidates[:top_n]]

@@ -7,11 +7,22 @@
   <div class="gauge">
     <div class="gauge-fill" style="width: {{ pct }}%"></div>
   </div>
-  <p class="gauge-label">{{ pct }}% phishing probability · model v{{ result.model_version }}</p>
-</div>
-<div class="result-actions">
-  <button type="button" id="feedback-wrong-btn" class="btn-ghost" data-feedback-id="{{ result.feedback_id }}">
-    This is wrong
-  </button>
-  <p class="feedback-thanks" hidden>Thanks — logged for the next training run.</p>
+  <p class="gauge-label">Confidence {{ pct }}% · model v{{ result.model_version }}</p>
+  {% if result.reasons %}
+    <ul class="reasons-list">
+      {% for reason in result.reasons %}
+        <li>{{ reason }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+  <div class="feedback-ask">
+    <span class="feedback-ask-label">Was this prediction correct?</span>
+    <div class="feedback-buttons">
+      <button type="button" id="feedback-yes-btn" class="btn-ghost btn-ghost--yes">Yes</button>
+      <button type="button" id="feedback-wrong-btn" class="btn-ghost btn-ghost--no" data-feedback-id="{{ result.feedback_id }}">
+        No, report it
+      </button>
+    </div>
+    <p class="feedback-thanks" hidden>Thanks — logged for the next training run.</p>
+  </div>
 </div>

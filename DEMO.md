@@ -20,7 +20,12 @@ step.
 
 On the app tab, click the **fake PayPal login** example chip (or paste
 `http://paypal-secure-login.tk/verify?id=88231`). Point out:
-- the verdict, the probability gauge, the model version badge
+- the mascot: neutral → scanning (pulsing scan beam) → alarmed (shake, red
+  glow, "!" badge) as the verdict comes back — it's not decorative, its
+  state is driven directly by the API response
+- the **Reasons** list under the gauge (".tk TLD", "no HTTPS", bait words,
+  hyphens in the hostname) — a simple rule-based explainer, deliberately
+  not SHAP (that's future scope, see REPORT.md)
 - this is a lexical-only model — no network call was made to that URL
 
 ## 2. Show it get something wrong, and correct it
@@ -28,8 +33,21 @@ On the app tab, click the **fake PayPal login** example chip (or paste
 Paste a URL the model is likely to misjudge — a legitimate-looking site
 with an unusual structure, e.g. a long-path SaaS login URL. If it says
 "safe" but you're demonstrating a false negative (or vice versa), narrate
-that explicitly, then click **This is wrong**. Point at the confirmation
-text: *"logged for the next training run."*
+that explicitly, then click **No, report it** under "Was this prediction
+correct?". Point at the confirmation text: *"logged for the next training
+run."* (The mascot turns happy/green for a correct "Safe" call if you click
+**Yes** instead — both paths are live, not mocked.)
+
+## 1.5. Walk the pipeline diagram
+
+Scroll to **How PhishGuard Works** and click **Play the walkthrough**. It
+animates the exact path a prediction and a correction take through the
+system — User → Flask → Feedback DB → (webhook/cron) → Jenkins
+(Train→Gate→Test→Scan) → Docker Image → back to the deployed app, and
+Jenkins → Dashboard — with each stage's caption explaining what happens
+there. Click any box directly to jump to its explanation instead. This is
+the fastest way to give the room the whole architecture in 30 seconds
+before diving into the live steps below.
 
 ## 3. Prove it landed in the database
 

@@ -26,6 +26,55 @@
   </header>
 
   <main class="hero">
+    <svg id="mascot" class="mascot mascot--idle" viewBox="0 0 160 180" role="img" aria-label="PhishGuard mascot">
+      <defs>
+        <clipPath id="mascot-shield-clip">
+          <path d="M80 8 L138 30 L138 92 C138 132 112 158 80 172 C48 158 22 132 22 92 L22 30 Z" />
+        </clipPath>
+        <linearGradient id="mascot-shield-fill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#232838" />
+          <stop offset="100%" stop-color="#171b26" />
+        </linearGradient>
+      </defs>
+
+      <path id="mascot-shield" class="mascot-shield"
+            d="M80 8 L138 30 L138 92 C138 132 112 158 80 172 C48 158 22 132 22 92 L22 30 Z"
+            fill="url(#mascot-shield-fill)" />
+
+      <rect class="mascot-scan-beam" x="14" y="10" width="132" height="26" clip-path="url(#mascot-shield-clip)" />
+
+      <g class="mascot-face mascot-face--neutral">
+        <circle class="mascot-eye" cx="60" cy="86" r="7.5" />
+        <circle class="mascot-eye" cx="100" cy="86" r="7.5" />
+        <path class="mascot-mouth" d="M64 116 Q80 122 96 116" />
+      </g>
+
+      <g class="mascot-face mascot-face--safe">
+        <path class="mascot-eye-happy" d="M50 88 Q60 76 70 88" />
+        <path class="mascot-eye-happy" d="M90 88 Q100 76 110 88" />
+        <path class="mascot-mouth-happy" d="M58 110 Q80 132 102 110" />
+      </g>
+
+      <g class="mascot-face mascot-face--phishing">
+        <path class="mascot-brow" d="M48 70 L64 78" />
+        <path class="mascot-brow" d="M112 70 L96 78" />
+        <circle class="mascot-eye-alarmed" cx="60" cy="90" r="9" />
+        <circle class="mascot-eye-alarmed" cx="100" cy="90" r="9" />
+        <circle class="mascot-mouth-alarmed" cx="80" cy="120" r="7" />
+      </g>
+
+      <g class="mascot-badge mascot-badge--safe">
+        <circle cx="130" cy="42" r="17" />
+        <path d="M122 42 L128 48 L139 35" fill="none" />
+      </g>
+      <g class="mascot-badge mascot-badge--phishing">
+        <circle cx="130" cy="42" r="17" />
+        <path d="M130 33 L130 45" />
+        <circle cx="130" cy="51" r="1.6" fill="currentColor" stroke="none" />
+      </g>
+    </svg>
+    <p class="mascot-caption" id="mascot-caption">Paste a link and I'll take a look.</p>
+
     <p class="eyebrow">Self-improving phishing URL detector</p>
     <h1>Paste a link. Know in a blink.</h1>
     <p class="sub">
@@ -69,10 +118,13 @@
     </div>
   </main>
 
+  {% include "_pipeline.html" %}
+
   <footer class="site-footer">
     <p>PhishGuard · T.E. Sem V DevOps-MLOps lab · Dept. of AI &amp; DS, TCET</p>
   </footer>
 
   <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/pipeline.js') }}"></script>
 </body>
 </html>

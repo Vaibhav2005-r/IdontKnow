@@ -46,8 +46,13 @@ def test_phishing_url_shows_verdict_and_feedback_button(driver, base_url):
     WebDriverWait(driver, 10).until(
         EC.visibility_of_element_located((By.CSS_SELECTOR, "#result.result--visible"))
     )
+    # The result card's height animates in via CSS transition (~350ms), so a
+    # button near the bottom of the card (below the reasons list) can be
+    # present in the DOM but still visually clipped by the parent's
+    # overflow:hidden for a moment -- wait for real visibility, not just
+    # presence, or this races the animation.
     wrong_btn = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.ID, "feedback-wrong-btn"))
+        EC.visibility_of_element_located((By.ID, "feedback-wrong-btn"))
     )
     assert wrong_btn.is_displayed()
 
@@ -86,7 +91,9 @@ def test_reasons_list_and_yes_button(driver, base_url):
     )
     assert len(reasons.find_elements(By.TAG_NAME, "li")) > 0
 
-    yes_btn = driver.find_element(By.ID, "feedback-yes-btn")
+    yes_btn = WebDriverWait(driver, 10).until(
+        EC.element_to_be_clickable((By.ID, "feedback-yes-btn"))
+    )
     yes_btn.click()
     WebDriverWait(driver, 10).until(
         lambda d: d.find_element(By.ID, "feedback-yes-btn").get_attribute("disabled") is not None

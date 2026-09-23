@@ -4,7 +4,7 @@ services:
     image: phishguard:local
     container_name: phishguard-app
     ports:
-      - "5000:5000"
+      - "${APP_PORT:-5050}:5000"
     environment:
       FEEDBACK_DB_PATH: /app/data/feedback/feedback.db
       MODEL_REGISTRY_PATH: /app/models/registry.json

@@ -65,11 +65,13 @@ Jenkinsfile, Dockerfile, docker-compose.yml
 | Chrome | for Selenium tests | for Selenium tests |
 | Shell commands below | zsh/bash (as written) | use PowerShell equivalents noted inline |
 
-This machine did not have Docker Desktop installed while building the
-project, so the `ml/`, Flask, and dashboard pieces were run and verified
-directly; the Docker/Compose/Jenkins pieces are written and reviewed but
-need Docker Desktop installed before you can `docker build`/`docker compose up`
-locally. Install it, then everything below works as written.
+The full stack (`docker compose up --build`) has been verified end-to-end on
+macOS with Docker Desktop: both containers come up `healthy`, the app and
+dashboard correctly share the `feedback_data` named volume (a correction
+submitted through the app UI showed up in the dashboard immediately and
+survived an `app` container restart), and `trivy image` runs cleanly
+against the built image (see `REPORT.md` §8 for the one real finding it
+caught and how it was fixed).
 
 ## Quickstart — macOS
 
@@ -121,9 +123,13 @@ pytest tests/ui -m ui
 
 ```bash
 docker compose up --build
-# app:       http://localhost:5000
+# app:       http://localhost:5050   (host port; container listens on 5000)
 # dashboard: http://localhost:8501
 ```
+
+Host port 5050 is set in `docker-compose.yml` because macOS often has
+ControlCenter/AirPlay squatting on 5000 — override with `APP_PORT=5000
+docker compose up --build` on a machine where 5000 is free.
 
 The image bakes in whatever is in `models/` at build time — train first,
 then build, so the container serves the model you just promoted.

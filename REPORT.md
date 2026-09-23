@@ -126,6 +126,21 @@ container → Trivy scan → Deploy → Archive artifacts.** Triggered by a
 GitHub webhook push and a nightly cron. See `Jenkinsfile` and
 `DEMO.md` §4–5 for a walkthrough of a real run.
 
+The full stack was built and run end-to-end with Docker Desktop: both
+containers report `healthy`, the app and dashboard containers correctly
+share the named `feedback_data` volume (a correction submitted through the
+app was immediately visible in the dashboard's "User corrections" metric
+and survived an app container restart), and a real `trivy image` scan of
+the built image found 13 HIGH-severity CVEs in a transitive dependency
+(Pillow 10.4.0, pulled in by Streamlit, all image-parsing vulnerabilities
+in codecs — PSD/FITS/PCF/BDF/GD/JPEG2000 — the app never decodes). Pinning
+Pillow to 12.3.0 (requires Streamlit ≥1.55, which still allows Pillow <13)
+in `requirements.txt` removed all 13 without any test or behavior change;
+the remaining 44 HIGH findings are in the `python:3.12-slim` base image's
+Debian packages and are addressed by the normal practice of rebuilding
+against a fresh base image tag periodically, which this pipeline already
+does on every run since the base image isn't pinned to a digest.
+
 ## 9. Lab experiments demonstrated
 
 | # | Experiment | Where |

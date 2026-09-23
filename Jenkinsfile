@@ -17,7 +17,6 @@ pipeline {
         IMAGE_NAME           = 'phishguard'
         TEST_CONTAINER       = 'phishguard-selenium-test'
         TEST_PORT            = '5057'
-        GATE_REJECTED        = 'false'
     }
 
     options {
@@ -64,11 +63,18 @@ pipeline {
                         """,
                         returnStatus: true
                     )
+                    // GATE_REJECTED must NOT be declared in the top-level `environment {}`
+                    // block: declarative pipeline re-injects that block's values at stage
+                    // boundaries, which silently reverts an in-script env.X mutation from
+                    // a prior stage. Setting it fresh here, on every path, is what makes
+                    // it actually stick for the rest of the run.
                     if (trainStatus == 2) {
                         env.GATE_REJECTED = 'true'
                         currentBuild.result = 'UNSTABLE'
                         echo 'Accuracy gate rejected the candidate model -- skipping build & deploy.'
-                    } else if (trainStatus != 0) {
+                    } else if (trainStatus == 0) {
+                        env.GATE_REJECTED = 'false'
+                    } else {
                         error("ml.train failed with exit code ${trainStatus}")
                     }
                 }

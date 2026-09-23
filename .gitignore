@@ -1,0 +1,17 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+
+models/*.joblib
+models/registry.json
+artifacts/*.json
+data/feedback/*.db
+
+.DS_Store
+*.log
+node_modules/
+.env

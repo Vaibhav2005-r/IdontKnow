@@ -1,28 +1,40 @@
 {% set is_phishing = result.label_id == 1 %}
 {% set pct = (result.phishing_probability * 100) | round(1) %}
-<div class="result-icon">{{ "⚠️" if is_phishing else "✅" }}</div>
-<div class="result-body">
-  <p class="result-verdict">{{ "Phishing" if is_phishing else "Safe" }}</p>
-  <p class="result-url">{{ result.url }}</p>
-  <div class="gauge">
-    <div class="gauge-fill" style="width: {{ pct }}%"></div>
+{% set radius = 42 %}
+{% set circumference = (2 * 3.14159265 * radius) | round(2) %}
+{% set offset = (circumference * (1 - result.phishing_probability)) | round(2) %}
+<div class="result-shimmer" aria-hidden="true"></div>
+<div class="result-top">
+  <div class="gauge-ring">
+    <svg viewBox="0 0 100 100">
+      <circle class="gauge-track" cx="50" cy="50" r="{{ radius }}"></circle>
+      <circle class="gauge-ring-fill" cx="50" cy="50" r="{{ radius }}"
+              stroke-dasharray="{{ circumference }}"
+              stroke-dashoffset="{{ circumference }}"
+              data-target-offset="{{ offset }}"></circle>
+    </svg>
+    <div class="gauge-percent" data-count-to="{{ pct }}">0%</div>
   </div>
-  <p class="gauge-label">Confidence {{ pct }}% · model v{{ result.model_version }}</p>
-  {% if result.reasons %}
-    <ul class="reasons-list">
-      {% for reason in result.reasons %}
-        <li>{{ reason }}</li>
-      {% endfor %}
-    </ul>
-  {% endif %}
-  <div class="feedback-ask">
-    <span class="feedback-ask-label">Was this prediction correct?</span>
-    <div class="feedback-buttons">
-      <button type="button" id="feedback-yes-btn" class="btn-ghost btn-ghost--yes">Yes</button>
-      <button type="button" id="feedback-wrong-btn" class="btn-ghost btn-ghost--no" data-feedback-id="{{ result.feedback_id }}">
-        No, report it
-      </button>
-    </div>
-    <p class="feedback-thanks" hidden>Thanks — logged for the next training run.</p>
+  <div class="result-top-text">
+    <p class="result-verdict">{{ "Phishing" if is_phishing else "Safe" }}</p>
+    <p class="result-url">{{ result.url }}</p>
+    <p class="result-model">model v{{ result.model_version }}</p>
   </div>
+</div>
+{% if result.reasons %}
+  <ul class="reasons-list">
+    {% for reason in result.reasons %}
+      <li style="--i: {{ loop.index0 }}">{{ reason }}</li>
+    {% endfor %}
+  </ul>
+{% endif %}
+<div class="feedback-ask">
+  <span class="feedback-ask-label">Was this prediction correct?</span>
+  <div class="feedback-buttons">
+    <button type="button" id="feedback-yes-btn" class="btn-ghost btn-ghost--yes">Yes</button>
+    <button type="button" id="feedback-wrong-btn" class="btn-ghost btn-ghost--no" data-feedback-id="{{ result.feedback_id }}">
+      No, report it
+    </button>
+  </div>
+  <p class="feedback-thanks" hidden></p>
 </div>

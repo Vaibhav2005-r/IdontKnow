@@ -84,6 +84,37 @@ plain form-and-result page:
   here, since a rule-based explanation is enough to make a verdict legible
   without adding a second, harder-to-verify explanation model.
 
+A later pass added a second layer of motion and depth, still hand-rolled
+CSS/SVG/vanilla JS with no new dependency:
+
+- **Circular confidence gauge.** Replaces the original linear bar: an SVG
+  ring draws itself in (`stroke-dashoffset` animated from the full
+  circumference to the target) while the center percentage counts up from
+  0, both triggered the instant a verdict renders — server-rendered (the
+  non-JS form fallback) and client-rendered (`fetch`) paths share the same
+  markup and the same `animateGauge()` trigger.
+- **A live stats strip** below the subhead (checks run / corrections
+  learned / model accuracy) that queries `GET /version` and animates each
+  number in with an eased count-up, refreshing after every prediction and
+  every "No, report it" — a small, real (not decorative) readout of the
+  feedback loop actually working.
+- **An animated background system**: a masked drifting grid, three slow
+  blurred gradient blobs, and a radial spotlight that follows the cursor
+  (`--spot-x`/`--spot-y` custom properties updated on `mousemove`) — all
+  `position: fixed` behind `z-index: 0` content, `pointer-events: none`.
+- **Depth and motion on interaction**: the check-card and result card tilt
+  subtly toward the cursor (`data-tilt`, gated behind `hover`/
+  `prefers-reduced-motion` media queries so it never runs on touch), the
+  Check URL button has a shifting gradient with a hover shine sweep, and
+  the hero's elements stagger in on load.
+- **The pipeline diagram now reveals itself on scroll** (`IntersectionObserver`):
+  nodes fade up staggered, solid edges draw themselves in via the same
+  `stroke-dashoffset` technique as the gauge (each path's real length read
+  with `getTotalLength()`, not hardcoded), and the dashed cross-lane edges
+  fade in — all before the "Play the walkthrough" narration is even
+  touched.
+- Every animation loop is covered by `@media (prefers-reduced-motion: reduce)`.
+
 ## 4. Dataset
 
 **Web Page Phishing Detection** (Hannousse & Yahiouche, 2021; also

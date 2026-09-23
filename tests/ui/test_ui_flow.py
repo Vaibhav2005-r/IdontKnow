@@ -129,6 +129,31 @@ def test_pipeline_diagram_node_click_updates_caption(driver, base_url):
     assert "trivy" in caption.text.lower()
 
 
+def test_stats_strip_updates_after_a_check(driver, base_url):
+    driver.get(base_url)
+    stat_el = WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.ID, "stat-predictions"))
+    )
+    # the count-up animation takes ~1s; wait for it to settle on the real value
+    WebDriverWait(driver, 10).until(
+        lambda d: d.find_element(By.ID, "stat-predictions").text.strip().isdigit()
+    )
+    before = int(stat_el.text.strip())
+
+    url_input = driver.find_element(By.ID, "url-input")
+    url_input.clear()
+    url_input.send_keys("https://www.wikipedia.org")
+    driver.find_element(By.ID, "check-btn").click()
+
+    WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.CSS_SELECTOR, "#result.result--visible"))
+    )
+    WebDriverWait(driver, 15).until(
+        lambda d: d.find_element(By.ID, "stat-predictions").text.strip().isdigit()
+        and int(d.find_element(By.ID, "stat-predictions").text.strip()) == before + 1
+    )
+
+
 def test_invalid_url_shows_error(driver, base_url):
     driver.get(base_url)
     url_input = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "url-input")))

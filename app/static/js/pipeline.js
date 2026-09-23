@@ -10,6 +10,47 @@
   const edges = Array.from(svg.querySelectorAll(".edge"));
   const pills = Array.from(svg.querySelectorAll(".stage-pill"));
 
+  // ---- scroll-in reveal: nodes fade up, solid edges draw themselves in ----
+  (function initScrollReveal() {
+    const wrap = document.querySelector(".pipeline-diagram-wrap");
+    if (!wrap) return;
+
+    const solidEdges = edges.filter((e) => !e.classList.contains("edge--cross"));
+    solidEdges.forEach((edge) => {
+      const len = edge.getTotalLength();
+      edge.style.strokeDasharray = String(len);
+      edge.style.strokeDashoffset = String(len);
+    });
+
+    const reveal = () => {
+      wrap.classList.add("in-view");
+      solidEdges.forEach((edge, i) => {
+        edge.style.transitionDelay = i * 0.12 + "s";
+        // next frame so the initial (hidden) dashoffset has painted first
+        requestAnimationFrame(() => {
+          edge.style.strokeDashoffset = "0";
+        });
+      });
+    };
+
+    if (!("IntersectionObserver" in window)) {
+      reveal();
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            reveal();
+            observer.disconnect();
+          }
+        });
+      },
+      { threshold: 0.2 }
+    );
+    observer.observe(wrap);
+  })();
+
   let playToken = 0; // bumped to cancel an in-flight walkthrough
 
   function clearActive() {

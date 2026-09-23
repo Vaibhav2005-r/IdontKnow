@@ -26,6 +26,7 @@ MODELS_DIR = Path("models")
 ARTIFACTS_DIR = Path("artifacts")
 REGISTRY_PATH = MODELS_DIR / "registry.json"
 LAST_RUN_PATH = ARTIFACTS_DIR / "last_run.json"
+RUN_HISTORY_PATH = ARTIFACTS_DIR / "run_history.jsonl"
 
 _BUILDERS = {
     "rf": lambda: RandomForestClassifier(n_estimators=200, random_state=42, n_jobs=-1),
@@ -71,6 +72,8 @@ def _load_live_model(registry: dict):
 def _write_last_run(payload: dict) -> None:
     ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
     LAST_RUN_PATH.write_text(json.dumps(payload, indent=2))
+    with RUN_HISTORY_PATH.open("a") as f:
+        f.write(json.dumps(payload) + "\n")
 
 
 def run(args: argparse.Namespace) -> int:

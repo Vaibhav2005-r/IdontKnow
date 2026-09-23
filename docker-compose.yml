@@ -1,0 +1,45 @@
+services:
+  app:
+    build: .
+    image: phishguard:local
+    container_name: phishguard-app
+    ports:
+      - "5000:5000"
+    environment:
+      FEEDBACK_DB_PATH: /app/data/feedback/feedback.db
+      MODEL_REGISTRY_PATH: /app/models/registry.json
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
+    volumes:
+      - feedback_data:/app/data/feedback
+    restart: unless-stopped
+
+  dashboard:
+    image: phishguard:local
+    container_name: phishguard-dashboard
+    command: >
+      streamlit run dashboard/app.py
+      --server.address=0.0.0.0
+      --server.port=8501
+      --server.headless=true
+    depends_on:
+      - app
+    ports:
+      - "8501:8501"
+    environment:
+      FEEDBACK_DB_PATH: /app/data/feedback/feedback.db
+      MODEL_REGISTRY_PATH: /app/models/registry.json
+      RUN_HISTORY_PATH: /app/artifacts/run_history.jsonl
+    volumes:
+      - feedback_data:/app/data/feedback:ro
+      - ./models:/app/models:ro
+      - ./artifacts:/app/artifacts:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8501/_stcore/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    restart: unless-stopped
+
+volumes:
+  feedback_data:

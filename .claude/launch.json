@@ -5,7 +5,15 @@
       "name": "phishguard-flask",
       "runtimeExecutable": ".venv/bin/python",
       "runtimeArgs": ["wsgi.py"],
-      "port": 5000
+      "port": 5000,
+      "autoPort": true
+    },
+    {
+      "name": "phishguard-dashboard",
+      "runtimeExecutable": ".venv/bin/streamlit",
+      "runtimeArgs": ["run", "dashboard/app.py", "--server.headless", "true"],
+      "port": 8501,
+      "autoPort": true
     }
   ]
 }

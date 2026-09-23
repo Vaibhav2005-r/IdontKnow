@@ -1,0 +1,15 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+.git/
+.github/
+tests/
+docs/
+*.md
+.DS_Store
+node_modules/
+data/feedback/*.db

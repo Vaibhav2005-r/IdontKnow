@@ -27,10 +27,13 @@ def test_safe_url_shows_verdict(driver, base_url):
     url_input.send_keys("https://www.wikipedia.org")
     driver.find_element(By.ID, "check-btn").click()
 
-    result = WebDriverWait(driver, 10).until(
-        EC.visibility_of_element_located((By.CSS_SELECTOR, "#result.result--visible"))
+    WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.CSS_SELECTOR, "#result.result--visible"))
     )
-    assert "wikipedia.org" in result.text.lower()
+    url_line = WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.CSS_SELECTOR, "#result .result-url"))
+    )
+    assert "wikipedia.org" in url_line.get_attribute("textContent").lower()
 
 
 def test_phishing_url_shows_verdict_and_feedback_button(driver, base_url):

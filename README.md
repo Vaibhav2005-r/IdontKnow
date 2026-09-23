@@ -159,6 +159,22 @@ agent: Python 3.12, Docker, Chrome (for the Selenium stage), and the
 cron. No Jenkins credentials are required for the default pipeline — it
 builds and deploys locally on the agent via `docker compose`.
 
+This has been run end-to-end against a real local Jenkins (2.568.3): a
+Pipeline job pointed at this repo passed all twelve stages, promoted and
+deployed v1.0, then correctly rejected a worse candidate (real user
+feedback submitted through the live app) and skipped the build/deploy
+stages on that run. See `REPORT.md` §8 for the two real bugs that surfaced
+along the way and how they were fixed.
+
+Quick local setup, if you want to reproduce this (macOS):
+```bash
+brew install --cask docker   # if not already installed
+brew install jenkins-lts trivy
+brew services start jenkins-lts   # http://localhost:8080, follow the setup wizard
+```
+Then create a Pipeline job → "Pipeline script from SCM" → Git → this
+repo's path or URL, script path `Jenkinsfile`.
+
 ## Hard contracts (do not change casually)
 
 - Label convention: `1 = phishing, 0 = safe`, everywhere — dataset, DB, model, API.

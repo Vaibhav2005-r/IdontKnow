@@ -169,6 +169,48 @@ Debian packages and are addressed by the normal practice of rebuilding
 against a fresh base image tag periodically, which this pipeline already
 does on every run since the base image isn't pinned to a digest.
 
+**The `Jenkinsfile` was also run against a real, locally installed Jenkins
+2.568.3** (not just reviewed) — a Pipeline job pointed at this repo's
+`main` branch. Build #3 passed all twelve stages
+(Checkout → Setup Python env → Merge feedback + Train → Accuracy gate →
+Unit tests → Build image → Selenium tests against the built container →
+Trivy scan → Deploy → Archive artifacts) in 2m 26s, promoted v1.0, and
+deployed it — `docker ps` afterward showed the exact same `phishguard-app`
+/ `phishguard-dashboard` containers, now built and started by Jenkins
+rather than by hand.
+
+Running it for real, rather than only reading the file, surfaced two
+genuine bugs no amount of review caught:
+
+1. **The feedback loop had a storage mismatch.** The live app's
+   `feedback.db` lives inside a Docker named volume; the "Merge feedback +
+   Train" stage was reading a plain workspace-relative path. Every retrain
+   — scheduled or webhook-triggered — would have silently trained on the
+   committed dataset only, never on what users actually corrected,
+   defeating the project's central premise. Fixed by having that stage
+   `docker cp` the live container's `feedback.db` into the workspace
+   before training.
+2. **A Declarative Pipeline caveat swallowed the gate's own decision.**
+   `GATE_REJECTED` was declared in the top-level `environment {}` block
+   and then mutated with `env.GATE_REJECTED = 'true'` inside the Train
+   stage on rejection. Declarative Pipeline re-injects that block's
+   values at stage boundaries, so the very next stage saw it reset to
+   `'false'` — one echo line said "gate rejected," the next said "Gate:
+   PROMOTED," and the `when { expression { env.GATE_REJECTED != 'true' } }`
+   guards on Build/Selenium/Trivy/Deploy let a rejected candidate through
+   anyway. Confirmed with a real submitted correction that made the
+   candidate score 88.98% against a live 90.11% (correctly rejected by
+   `ml.train`'s own gate); caught the pipeline shipping it anyway. Fixed
+   by not declaring that variable in `environment {}` at all, and setting
+   it explicitly on every path inside the Train stage's own script block,
+   where the mutation survives. Re-run confirmed: both echoes now agree,
+   and Build/Selenium/Trivy/Deploy show `NOT_EXECUTED`. Because
+   `ml.train` itself never writes `registry.json` unless a candidate is
+   promoted, the earlier (buggy) run never actually shipped a worse
+   *model* — it only wasted a rebuild/redeploy cycle on the unchanged
+   live one, which is why this was safe to discover this way rather than
+   in front of an audience.
+
 ## 9. Lab experiments demonstrated
 
 | # | Experiment | Where |

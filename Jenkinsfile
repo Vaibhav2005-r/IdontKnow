@@ -47,6 +47,14 @@ pipeline {
 
         stage('Merge feedback + Train') {
             steps {
+                // The live app's feedback.db lives in a Docker named volume, not this
+                // workspace -- pull it in first or every retrain only ever sees the
+                // committed dataset, never what users actually corrected.
+                sh '''
+                    mkdir -p data/feedback
+                    docker cp phishguard-app:/app/data/feedback/feedback.db data/feedback/feedback.db 2>/dev/null || \
+                        echo "No running phishguard-app container (or no feedback yet) -- training on committed data only."
+                '''
                 script {
                     def feedbackArg = fileExists(env.FEEDBACK_DB_PATH) ? "--feedback ${env.FEEDBACK_DB_PATH}" : ''
                     def trainStatus = sh(

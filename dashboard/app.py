@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 
+import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
@@ -71,7 +72,7 @@ with left:
             margin=dict(l=10, r=10, t=10, b=10),
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
 with right:
     st.subheader("Promoted vs rejected")
@@ -85,7 +86,7 @@ with right:
         )])
         fig2.update_layout(template="plotly_dark", height=280, margin=dict(l=10, r=10, t=10, b=10),
                             showlegend=True)
-        st.plotly_chart(fig2, use_container_width=True)
+        st.plotly_chart(fig2, width="stretch")
 
 st.divider()
 st.subheader("Model registry")
@@ -93,7 +94,7 @@ if models:
     reg_df = pd.DataFrame(models)[["version", "model_type", "accuracy", "n_samples", "trained_at", "promoted"]]
     reg_df["accuracy"] = reg_df["accuracy"].map(lambda a: f"{a:.2%}")
     reg_df["live"] = reg_df["version"] == live_version
-    st.dataframe(reg_df.sort_values("trained_at", ascending=False), use_container_width=True, hide_index=True)
+    st.dataframe(reg_df.sort_values("trained_at", ascending=False), width="stretch", hide_index=True)
 else:
     st.info("No promoted models yet.")
 
@@ -105,7 +106,7 @@ if not feedback_df.empty:
     show["was_wrong"] = show["predicted_label"] != show["correct_label"]
     st.dataframe(
         show[["created_at", "url", "predicted", "corrected_to", "was_wrong", "model_version"]],
-        use_container_width=True, hide_index=True,
+        width="stretch", hide_index=True,
     )
 else:
     st.info("No predictions logged yet. Use the PhishGuard app to check some URLs.")

@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PhishGuard — URL Phishing Detector</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <div class="bg-glow" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="{{ url_for('routes.index') }}">
+        <span class="brand-mark">🛡</span>
+        <span class="brand-name">PhishGuard</span>
+      </a>
+      <div class="topbar-meta">
+        <span class="badge" id="model-version-badge" title="Currently deployed model">
+          model v{{ model_version }} · {{ model_type }}
+        </span>
+        <a class="topbar-link" href="http://localhost:8501" target="_blank" rel="noopener">Dashboard ↗</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="hero">
+    <p class="eyebrow">Self-improving phishing URL detector</p>
+    <h1>Paste a link. Know in a blink.</h1>
+    <p class="sub">
+      Every check trains the next version. Flag a wrong call and PhishGuard's
+      pipeline retrains, gates on accuracy, and only ships a better model.
+    </p>
+
+    <form id="predict-form" class="check-card" autocomplete="off">
+      <div class="input-row">
+        <span class="input-icon">🔗</span>
+        <input
+          type="text"
+          id="url-input"
+          name="url"
+          placeholder="https://example.com/login"
+          value="{{ submitted_url }}"
+          required
+        >
+        <button type="submit" id="check-btn">
+          <span class="btn-label">Check URL</span>
+          <span class="btn-spinner" aria-hidden="true"></span>
+        </button>
+      </div>
+      {% if error %}
+        <p class="form-error" role="alert">{{ error }}</p>
+      {% endif %}
+    </form>
+
+    <section id="result" class="result {{ 'result--visible' if result else '' }} {{ 'result--phishing' if result and result.label_id == 1 else 'result--safe' if result else '' }}"
+             data-feedback-id="{{ result.feedback_id if result else '' }}">
+      {% if result %}
+        {% include "_result.html" %}
+      {% endif %}
+    </section>
+
+    <div class="examples">
+      <span class="examples-label">Try one:</span>
+      <button type="button" class="example-chip" data-url="https://www.wikipedia.org">wikipedia.org</button>
+      <button type="button" class="example-chip" data-url="http://192.168.4.20/sbi/kyc/update.php">suspicious IP link</button>
+      <button type="button" class="example-chip" data-url="http://paypal-secure-login.tk/verify?id=88231">fake PayPal login</button>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <p>PhishGuard · T.E. Sem V DevOps-MLOps lab · Dept. of AI &amp; DS, TCET</p>
+  </footer>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

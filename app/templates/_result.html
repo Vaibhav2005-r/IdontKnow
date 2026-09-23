@@ -1,0 +1,17 @@
+{% set is_phishing = result.label_id == 1 %}
+{% set pct = (result.phishing_probability * 100) | round(1) %}
+<div class="result-icon">{{ "⚠️" if is_phishing else "✅" }}</div>
+<div class="result-body">
+  <p class="result-verdict">{{ "Phishing" if is_phishing else "Safe" }}</p>
+  <p class="result-url">{{ result.url }}</p>
+  <div class="gauge">
+    <div class="gauge-fill" style="width: {{ pct }}%"></div>
+  </div>
+  <p class="gauge-label">{{ pct }}% phishing probability · model v{{ result.model_version }}</p>
+</div>
+<div class="result-actions">
+  <button type="button" id="feedback-wrong-btn" class="btn-ghost" data-feedback-id="{{ result.feedback_id }}">
+    This is wrong
+  </button>
+  <p class="feedback-thanks" hidden>Thanks — logged for the next training run.</p>
+</div>

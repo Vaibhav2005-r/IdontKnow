@@ -58,12 +58,13 @@ Jenkinsfile, Dockerfile, docker-compose.yml
 
 ## Prerequisites
 
-| | macOS (primary) | Windows |
+| | macOS | Windows |
 |---|---|---|
-| Python | 3.12 (`brew install python@3.12`) | 3.12 from [python.org](https://www.python.org/downloads/) — check "Add to PATH" |
-| Docker | [Docker Desktop for Mac](https://www.docker.com/products/docker-desktop/) | [Docker Desktop for Windows](https://www.docker.com/products/docker-desktop/) (needs WSL2) |
-| Chrome | for Selenium tests | for Selenium tests |
-| Shell commands below | zsh/bash (as written) | use PowerShell equivalents noted inline |
+| Git | `brew install git` (or already present) | [Git for Windows](https://git-scm.com/download/win) — installs Git Bash too |
+| Python | 3.12 — `brew install python@3.12` | 3.12 from [python.org](https://www.python.org/downloads/) — **tick "Add python.exe to PATH"** on the first installer screen |
+| Docker | [Docker Desktop for Mac](https://www.docker.com/products/docker-desktop/) | [Docker Desktop for Windows](https://www.docker.com/products/docker-desktop/) — needs WSL2, see below |
+| Chrome | for the Selenium tests | for the Selenium tests |
+| Shell | Terminal, zsh/bash (commands below as written) | PowerShell (commands below as written) — Git Bash also works with the macOS-style commands |
 
 The full stack (`docker compose up --build`) has been verified end-to-end on
 macOS with Docker Desktop: both containers come up `healthy`, the app and
@@ -71,7 +72,31 @@ dashboard correctly share the `feedback_data` named volume (a correction
 submitted through the app UI showed up in the dashboard immediately and
 survived an `app` container restart), and `trivy image` runs cleanly
 against the built image (see `REPORT.md` §8 for the one real finding it
-caught and how it was fixed).
+caught and how it was fixed). The Windows steps below use the same
+commands the project's own `wsgi.py`/`docker-compose.yml` support — they
+follow the same code path as macOS, just via `python.org`'s Python and
+PowerShell instead of Homebrew and zsh.
+
+### Docker on Windows — WSL2
+
+Docker Desktop for Windows requires WSL2. If this is a fresh machine:
+1. Open PowerShell **as Administrator** and run `wsl --install`, then reboot.
+2. Install Docker Desktop, and when it first launches confirm **Settings →
+   General → "Use the WSL 2 based engine"** is checked.
+3. If Docker Desktop complains about virtualization, enable it in your
+   PC's BIOS/UEFI (setting is usually called "Intel VT-x", "AMD-V", or
+   "SVM Mode").
+
+Full official walkthrough if you hit issues:
+https://docs.docker.com/desktop/setup/install/windows-install/
+
+## Get the code
+
+```bash
+git clone https://github.com/Vaibhav2005-r/IdontKnow.git
+cd IdontKnow
+```
+(PowerShell: identical — `git clone ...` then `cd IdontKnow`.)
 
 ## Quickstart — macOS
 
@@ -87,16 +112,17 @@ python -m ml.train --data data/raw/phishing_urls.csv
 # use PORT=5050 if `flask run`/wsgi.py fails to bind)
 PORT=5050 python wsgi.py
 # open http://localhost:5050
-
-# in another terminal: the dashboard
+```
+Open a **second** terminal tab for the dashboard (keep the app running in the first):
+```bash
+source .venv/bin/activate
 streamlit run dashboard/app.py
 # open http://localhost:8501
-
-# unit tests
-pytest -m "not ui"
-
-# UI tests (needs the app running + Chrome installed)
-APP_BASE_URL=http://localhost:5050 pytest tests/ui -m ui
+```
+Tests, in either terminal (stop the dev server first, or use a third tab):
+```bash
+pytest -m "not ui"                                          # unit tests
+APP_BASE_URL=http://localhost:5050 pytest tests/ui -m ui     # Selenium, needs the app running
 ```
 
 ## Quickstart — Windows (PowerShell)
@@ -104,20 +130,39 @@ APP_BASE_URL=http://localhost:5050 pytest tests/ui -m ui
 ```powershell
 py -3.12 -m venv .venv
 .venv\Scripts\Activate.ps1
+```
+If that second line fails with *"running scripts is disabled on this
+system"*, PowerShell's execution policy is blocking it — this is normal on
+a fresh Windows install, not a broken environment. Fix once per machine:
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+```
+then re-run `.venv\Scripts\Activate.ps1`. Your prompt should now start with
+`(.venv)`. Continue:
+```powershell
 pip install -r requirements-dev.txt
 
 python -m ml.train --data data/raw/phishing_urls.csv
 
 python wsgi.py
 # open http://localhost:5000
-
-# in another terminal
+```
+Open a **second** PowerShell window for the dashboard (re-activate the venv there too):
+```powershell
+.venv\Scripts\Activate.ps1
 streamlit run dashboard/app.py
-
+# open http://localhost:8501
+```
+Tests, in either window:
+```powershell
 pytest -m "not ui"
 $env:APP_BASE_URL = "http://localhost:5000"
 pytest tests/ui -m ui
 ```
+Windows doesn't have macOS's ControlCenter port-5000 conflict, so `PORT=`
+usually isn't needed — but if something else on the machine already owns
+5000, set it the same way: `$env:PORT = "5050"` before `python wsgi.py`,
+and use that port in the URL and in `$env:APP_BASE_URL` above.
 
 ## Docker (either OS, once Docker Desktop is running)
 
@@ -126,18 +171,46 @@ docker compose up --build
 # app:       http://localhost:5050   (host port; container listens on 5000)
 # dashboard: http://localhost:8501
 ```
+(PowerShell: same command, same URLs — Docker Compose's CLI is identical
+on both OSes.)
 
 Host port 5050 is set in `docker-compose.yml` because macOS often has
 ControlCenter/AirPlay squatting on 5000 — override with `APP_PORT=5000
-docker compose up --build` on a machine where 5000 is free.
+docker compose up --build` (macOS/Linux) or `$env:APP_PORT="5000"; docker
+compose up --build` (PowerShell) on a machine where 5000 is free.
 
-The image bakes in whatever is in `models/` at build time — train first,
-then build, so the container serves the model you just promoted.
+The image bakes in whatever is in `models/` at build time — train first
+(`python -m ml.train ...`, either Quickstart above), then build, so the
+container serves the model you just promoted.
 
 `gunicorn` (in requirements.txt) only runs inside the Linux Docker image —
 it doesn't work on Windows. Local dev on any OS uses `python wsgi.py`
 (Flask's own dev server), as in the Quickstarts above; `pip install` still
 succeeds on Windows since gunicorn is just unused there, not broken.
+
+## Troubleshooting
+
+- **Windows: `.venv\Scripts\Activate.ps1` — "running scripts is disabled
+  on this system"** → PowerShell's execution policy; see the fix under
+  the Windows quickstart above.
+- **`Cannot connect to the Docker daemon`** (either OS) → Docker Desktop
+  isn't running. Launch it from the Start menu / Applications and wait
+  for its whale icon to show "running" before retrying.
+- **`docker compose` port already allocated** → something else (or a
+  leftover container) already has that port. Free it with `docker compose
+  down`, or pick another port (`APP_PORT=...` as above).
+- **`python -m ml.train` or the app fails to import scikit-learn/pandas**
+  → you're not in the venv, or installed into the wrong Python. Confirm
+  the prompt shows `(.venv)`; on Windows confirm `py -3.12 -m venv .venv`
+  actually used 3.12 (`py -0` lists installed versions).
+- **Selenium tests can't find Chrome/chromedriver** → install Google
+  Chrome normally; `webdriver-manager` (already in
+  requirements-dev.txt) downloads a matching driver automatically on
+  first run — this needs an internet connection the first time.
+- **Windows PowerShell — `python` not found** → the installer's "Add
+  python.exe to PATH" step was skipped; either re-run the installer and
+  tick it, or use `py -3.12` in place of `python` for the venv-creation
+  step only (once the venv is active, plain `python` inside it works).
 
 ## Everyday commands
 
@@ -172,8 +245,12 @@ brew install --cask docker   # if not already installed
 brew install jenkins-lts trivy
 brew services start jenkins-lts   # http://localhost:8080, follow the setup wizard
 ```
-Then create a Pipeline job → "Pipeline script from SCM" → Git → this
-repo's path or URL, script path `Jenkinsfile`.
+Then create a Pipeline job → "Pipeline script from SCM" → Git →
+`https://github.com/Vaibhav2005-r/IdontKnow.git` (or your own local clone
+path), branch `main`, script path `Jenkinsfile`. On Windows, install
+Jenkins from the [official installer](https://www.jenkins.io/download/)
+or run it as a container instead — the agent still needs Python 3.12,
+Docker, Chrome, and Trivy on its `PATH`.
 
 ## Hard contracts (do not change casually)
 

@@ -88,16 +88,29 @@ ERROR: Checkout of Git remote '/Users/vaibhav/PS/phishguard' aborted because
 it references a local directory, which may be insecure.
 ```
 
-Jenkins refuses local-directory remotes unless told otherwise. Unblock it in
-**Manage Jenkins -> Script Console** (`http://localhost:8080/script`):
+Jenkins refuses local-directory remotes unless told otherwise. The error
+message suggests setting a system property, but doing that from the Script
+Console **does not work**: the plugin reads it once into a static field when
+the class loads, so by the time you can run anything the value is already
+cached. Assign the field itself instead, in **Manage Jenkins -> Script
+Console** (`http://localhost:8080/script`):
 
 ```groovy
-System.setProperty("hudson.plugins.git.GitSCM.ALLOW_LOCAL_CHECKOUT", "true")
+hudson.plugins.git.GitSCM.ALLOW_LOCAL_CHECKOUT = true
+println hudson.plugins.git.GitSCM.ALLOW_LOCAL_CHECKOUT   // must print true
 ```
 
-Immediate, no restart — but it is a runtime property, so **it resets every
+Immediate, no restart — but it lives in memory only, so **it resets every
 time Jenkins restarts**. Re-run it after a restart, or switch the job to the
 GitHub URL (below), which does not need it at all.
+
+The equivalent at startup, if you ever run Jenkins by hand rather than via
+brew services:
+
+```bash
+java -Dhudson.plugins.git.GitSCM.ALLOW_LOCAL_CHECKOUT=true \
+     -jar /opt/homebrew/opt/jenkins-lts/libexec/jenkins.war --httpPort=8080
+```
 
 ### Switching the job to GitHub instead
 

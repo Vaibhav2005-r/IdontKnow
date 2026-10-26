@@ -69,19 +69,75 @@ fi
 
 # --------------------------------------------------------------- 2. Jenkins
 step 2/4 "Jenkins"
-if command -v brew >/dev/null 2>&1 && brew services list 2>/dev/null | grep -q jenkins-lts; then
-    brew services start jenkins-lts >/dev/null 2>&1 || true
-else
-    bad "jenkins-lts not installed via brew; start your Jenkins by hand."
-fi
-for _ in $(seq 1 45); do
-    curl -fsS -o /dev/null http://localhost:8080/login 2>/dev/null && break
-    sleep 2
-done
+
+# Jenkins gets installed several ways (brew jenkins-lts, brew jenkins, a .war,
+# or a container), so detect what is actually here rather than assuming one.
 if curl -fsS -o /dev/null http://localhost:8080/login 2>/dev/null; then
-    ok "Jenkins answering on http://localhost:8080"
+    ok "Jenkins is already running on http://localhost:8080"
 else
-    bad "Jenkins is not answering on :8080 yet - give it another minute."
+    JENKINS_STARTED=""
+
+    # 1. Homebrew service, under either formula name.
+    if command -v brew >/dev/null 2>&1; then
+        JENKINS_FORMULA="$(brew services list 2>/dev/null \
+            | awk '/^jenkins/ {print $1; exit}')"
+        if [ -n "$JENKINS_FORMULA" ]; then
+            echo "   starting $JENKINS_FORMULA via brew services..."
+            brew services start "$JENKINS_FORMULA" >/dev/null 2>&1 || true
+            JENKINS_STARTED="brew:$JENKINS_FORMULA"
+        fi
+    fi
+
+    # 2. A Jenkins container (named jenkins*, running or stopped).
+    if [ -z "$JENKINS_STARTED" ]; then
+        JENKINS_CONTAINER="$(docker ps -a --filter 'name=jenkins' \
+            --format '{{.Names}}' 2>/dev/null | head -1)"
+        if [ -n "$JENKINS_CONTAINER" ]; then
+            echo "   starting container $JENKINS_CONTAINER..."
+            docker start "$JENKINS_CONTAINER" >/dev/null 2>&1 || true
+            JENKINS_STARTED="docker:$JENKINS_CONTAINER"
+        fi
+    fi
+
+    # 3. A jenkins.war sitting in the usual places.
+    if [ -z "$JENKINS_STARTED" ]; then
+        for war in "$HOME/jenkins.war" "$HOME/Downloads/jenkins.war" \
+                   /usr/local/opt/jenkins/libexec/jenkins.war \
+                   /opt/homebrew/opt/jenkins/libexec/jenkins.war \
+                   /opt/homebrew/opt/jenkins-lts/libexec/jenkins.war
+        do
+            if [ -f "$war" ]; then
+                echo "   starting $war with java..."
+                mkdir -p logs
+                nohup java -jar "$war" --httpPort=8080 > logs/jenkins.log 2>&1 &
+                echo $! > logs/jenkins.pid
+                JENKINS_STARTED="war:$war"
+                break
+            fi
+        done
+    fi
+
+    if [ -n "$JENKINS_STARTED" ]; then
+        echo "   waiting for Jenkins to come up (first start can take a minute)..."
+        for _ in $(seq 1 60); do
+            curl -fsS -o /dev/null http://localhost:8080/login 2>/dev/null && break
+            sleep 2
+        done
+    fi
+
+    if curl -fsS -o /dev/null http://localhost:8080/login 2>/dev/null; then
+        ok "Jenkins answering on http://localhost:8080 (via ${JENKINS_STARTED:-unknown})"
+    elif [ -n "$JENKINS_STARTED" ]; then
+        bad "Started $JENKINS_STARTED but :8080 is not answering yet."
+        echo "   Give it another minute, then reload http://localhost:8080"
+        [ -f logs/jenkins.log ] && echo "   Log: logs/jenkins.log"
+    else
+        bad "No Jenkins installation found (brew service, container, or .war)."
+        echo "   The app and dashboard below will still come up; only the"
+        echo "   pipeline demo needs Jenkins. To install it:"
+        echo "       brew install jenkins-lts && brew services start jenkins-lts"
+        echo "   Or run the walkthrough from the recorded build in REPORT.md section 8."
+    fi
 fi
 
 # ------------------------------------------------------- 3. the application

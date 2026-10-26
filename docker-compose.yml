@@ -24,7 +24,7 @@ services:
     depends_on:
       - app
     ports:
-      - "8501:8501"
+      - "${DASH_PORT:-8501}:8501"
     environment:
       FEEDBACK_DB_PATH: /app/data/feedback/feedback.db
       MODEL_REGISTRY_PATH: /app/models/registry.json

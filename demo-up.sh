@@ -12,6 +12,7 @@ set -uo pipefail
 cd "$(dirname "$0")"
 
 APP_PORT="${APP_PORT:-5050}"
+DASH_PORT="${DASH_PORT:-8501}"
 step() { printf '\n[%s] %s\n' "$1" "$2"; }
 ok()   { printf '   ok  %s\n' "$1"; }
 bad()  { printf '   !!  %s\n' "$1"; }
@@ -142,8 +143,41 @@ fi
 
 # ------------------------------------------------------- 3. the application
 step 3/4 "Containerised app + dashboard"
+
+# A venv-run app or dashboard from start.sh will be holding these ports, and
+# docker compose fails late and loudly when that happens. Clear our own
+# processes first; refuse to touch anything we did not start.
+for spec in "$APP_PORT:app" "$DASH_PORT:dashboard"; do
+    port="${spec%%:*}"; what="${spec##*:}"
+    holder_pid="$(lsof -ti "tcp:$port" -sTCP:LISTEN 2>/dev/null | head -1)"
+    [ -z "$holder_pid" ] && continue
+
+    holder_cmd="$(ps -o command= -p "$holder_pid" 2>/dev/null)"
+    case "$holder_cmd" in
+        *"com.docker"*|*"docker"*)
+            echo "   port $port held by Docker itself - compose will reuse it"
+            ;;
+        *"streamlit run dashboard/app.py"*|*"python wsgi.py"*|*"/wsgi.py"*)
+            echo "   freeing port $port from a local $what started by start.sh"
+            kill "$holder_pid" 2>/dev/null
+            sleep 2
+            ;;
+        *)
+            bad "Port $port is in use by something else (pid $holder_pid):"
+            echo "       $holder_cmd"
+            echo "   Either stop it, or run on another port:"
+            if [ "$what" = "app" ]; then
+                echo "       APP_PORT=5055 ./demo-up.sh"
+            else
+                echo "       DASH_PORT=8502 ./demo-up.sh"
+            fi
+            exit 1
+            ;;
+    esac
+done
+
 echo "   building and starting (first build takes a few minutes)..."
-if APP_PORT="$APP_PORT" docker compose up --build -d; then
+if APP_PORT="$APP_PORT" DASH_PORT="$DASH_PORT" docker compose up --build -d; then
     ok "compose finished"
 else
     bad "docker compose failed - see the output above"
@@ -166,17 +200,17 @@ if curl -fsS -o /dev/null "http://localhost:$APP_PORT/health" 2>/dev/null; then
 else
     bad "app is not answering on :$APP_PORT - docker compose logs app"
 fi
-curl -fsS -o /dev/null http://localhost:8501 2>/dev/null \
-    && ok "dash    http://localhost:8501" \
-    || bad "dashboard not answering on :8501 yet (Streamlit is slow to boot)"
+curl -fsS -o /dev/null "http://localhost:$DASH_PORT" 2>/dev/null \
+    && ok "dash    http://localhost:$DASH_PORT" \
+    || bad "dashboard not answering on :$DASH_PORT yet (Streamlit is slow to boot)"
 curl -fsS -o /dev/null http://localhost:8080/login 2>/dev/null \
     && ok "jenkins http://localhost:8080"
 
 cat <<TIP
 
    Open these three tabs before the evaluator arrives:
-     http://localhost:5050    the app
-     http://localhost:8501    the dashboard
+     http://localhost:$APP_PORT    the app
+     http://localhost:$DASH_PORT    the dashboard
      http://localhost:8080    Jenkins (the phishguard pipeline job)
 
    If this script found docker off your PATH, make that permanent:

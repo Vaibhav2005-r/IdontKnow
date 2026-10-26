@@ -16,3 +16,4 @@ data/feedback/*.db
 *.log
 node_modules/
 .env
+logs/

@@ -206,15 +206,20 @@ curl -fsS -o /dev/null "http://localhost:$DASH_PORT" 2>/dev/null \
 curl -fsS -o /dev/null http://localhost:8080/login 2>/dev/null \
     && ok "jenkins http://localhost:8080"
 
+if [ -n "${DOCKER_PATH_FIXUP:-}" ]; then
+    cat <<PATHTIP
+
+   docker was found outside your PATH. To make that permanent:
+     echo 'export PATH="$DOCKER_PATH_FIXUP:\$PATH"' >> ~/.zshrc && source ~/.zshrc
+PATHTIP
+fi
+
 cat <<TIP
 
    Open these three tabs before the evaluator arrives:
      http://localhost:$APP_PORT    the app
      http://localhost:$DASH_PORT    the dashboard
      http://localhost:8080    Jenkins (the phishguard pipeline job)
-
-   If this script found docker off your PATH, make that permanent:
-     echo 'export PATH="$DOCKER_PATH_FIXUP:\$PATH"' >> ~/.zshrc && source ~/.zshrc
 
    Useful during the demo:
      docker compose ps                 containers + health

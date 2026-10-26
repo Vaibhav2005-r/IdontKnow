@@ -79,6 +79,40 @@ set it explicitly. Do this **before the first build**:
 
 A stage dying with "command not found" is nearly always this.
 
+## Local checkout is blocked by default
+
+Pointing the job at the local clone fails on the first build with:
+
+```
+ERROR: Checkout of Git remote '/Users/vaibhav/PS/phishguard' aborted because
+it references a local directory, which may be insecure.
+```
+
+Jenkins refuses local-directory remotes unless told otherwise. Unblock it in
+**Manage Jenkins -> Script Console** (`http://localhost:8080/script`):
+
+```groovy
+System.setProperty("hudson.plugins.git.GitSCM.ALLOW_LOCAL_CHECKOUT", "true")
+```
+
+Immediate, no restart — but it is a runtime property, so **it resets every
+time Jenkins restarts**. Re-run it after a restart, or switch the job to the
+GitHub URL (below), which does not need it at all.
+
+### Switching the job to GitHub instead
+
+Durable, and required anyway to demonstrate the webhook. Push first, or the
+build runs an older commit:
+
+```bash
+git push origin main
+```
+
+Then **job -> Configure -> Repository URL** ->
+`https://github.com/Vaibhav2005-r/IdontKnow.git`. A private repo also needs
+credentials (**Manage Jenkins -> Credentials**, a GitHub personal access
+token with `repo` scope).
+
 ## Plugins
 
 The `Jenkinsfile` deliberately uses only `sh`, `junit` and

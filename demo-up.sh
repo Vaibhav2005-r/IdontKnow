@@ -18,8 +18,38 @@ bad()  { printf '   !!  %s\n' "$1"; }
 
 # ---------------------------------------------------------------- 1. Docker
 step 1/4 "Docker Desktop"
+
+# Docker Desktop installs its CLI in one of several places and only adds it to
+# PATH for *new* login shells, so a shell opened before (or during) the install
+# will not see it. Look in the known locations before concluding it is missing.
 if ! command -v docker >/dev/null 2>&1; then
-    bad "docker not on PATH. Install Docker Desktop, then re-run."
+    for candidate in \
+        /usr/local/bin/docker \
+        "$HOME/.docker/bin/docker" \
+        /opt/homebrew/bin/docker \
+        /Applications/Docker.app/Contents/Resources/bin/docker
+    do
+        if [ -x "$candidate" ]; then
+            PATH="$(dirname "$candidate"):$PATH"
+            export PATH
+            ok "found docker at $candidate (not on your PATH - see note at the end)"
+            DOCKER_PATH_FIXUP="$(dirname "$candidate")"
+            break
+        fi
+    done
+fi
+
+if ! command -v docker >/dev/null 2>&1; then
+    bad "No docker CLI found."
+    if [ -d /Applications/Docker.app ]; then
+        echo "   Docker Desktop IS installed (/Applications/Docker.app) but its"
+        echo "   command-line tool is missing. Open Docker Desktop once and let it"
+        echo "   finish setting up, then re-run this script."
+    else
+        echo "   Docker Desktop does not appear to be installed. Install it with:"
+        echo "       brew install --cask docker"
+        echo "   then open it once (it asks for a password on first run) and re-run."
+    fi
     exit 1
 fi
 if ! docker info >/dev/null 2>&1; then
@@ -86,12 +116,15 @@ curl -fsS -o /dev/null http://localhost:8501 2>/dev/null \
 curl -fsS -o /dev/null http://localhost:8080/login 2>/dev/null \
     && ok "jenkins http://localhost:8080"
 
-cat <<'TIP'
+cat <<TIP
 
    Open these three tabs before the evaluator arrives:
      http://localhost:5050    the app
      http://localhost:8501    the dashboard
      http://localhost:8080    Jenkins (the phishguard pipeline job)
+
+   If this script found docker off your PATH, make that permanent:
+     echo 'export PATH="$DOCKER_PATH_FIXUP:\$PATH"' >> ~/.zshrc && source ~/.zshrc
 
    Useful during the demo:
      docker compose ps                 containers + health
